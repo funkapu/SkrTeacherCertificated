@@ -10,7 +10,7 @@ export default function CallbackPage() {
   useEffect(() => {
     // ถ้า OAuth สำเร็จ Supabase จะตั้ง session ให้แล้ว
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+      if (data.user) {  
         setMsg('✅ เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าค้นหา…')
         setTimeout(() => router.replace('https://skr-teacher-certificated.vercel.app/search'), 800)
       } else {

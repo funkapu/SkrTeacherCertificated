@@ -12,7 +12,7 @@ export default function CallbackPage() {
     supabase.auth.getUser().then(({ data }) => {
       if (data.user) {
         setMsg('✅ เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าค้นหา…')
-        setTimeout(() => router.replace('https://skr-teacher-certificated.vercel.app//search'), 800)
+        setTimeout(() => router.replace('https://skr-teacher-certificated.vercel.app/search'), 800)
       } else {
         setMsg('❌ ลิงก์ไม่ถูกต้องหรือหมดอายุ')
       }

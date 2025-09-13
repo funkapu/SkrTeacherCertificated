@@ -142,7 +142,7 @@ export default function SearchPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => (location.href = '/upload')}
+              onClick={() => (location.href = 'https://skr-teacher-certificated.vercel.app/upload')}
               className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               อัปโหลดใบประกาศ

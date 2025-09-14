@@ -275,9 +275,9 @@ export default function SearchPage() {
                 value={teacherId}
                 onChange={(e)=>setTeacherId(e.target.value)}
               >
-                <option value={ALL_TEACHERS_VALUE}>— ทั้งหมดในหมวด —</option>
+                <option value={ALL_TEACHERS_VALUE} className='text-black'>— ทั้งหมดในหมวด —</option>
                 {teachers.map(t => (
-                  <option key={t.id} value={t.id}>{t.full_name}</option>
+                  <option key={t.id} value={t.id} className='text-black'>{t.full_name}</option>
                 ))}
               </select>
             </label>

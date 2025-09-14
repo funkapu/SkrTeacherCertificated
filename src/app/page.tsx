@@ -15,7 +15,7 @@ export default function Page() {
   }
 
   return (
-    <main className="min-h-screen flex items-center justify-center">
+    <main className="min-h-screen flex items-center justify-center bg-white">
       <div className="max-w-sm p-6 space-y-6 text-center">
         <Image
           src={logo}

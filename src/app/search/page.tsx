@@ -229,7 +229,7 @@ export default function SearchPage() {
             <div className="h-8 w-8 rounded-lg  text-white grid place-items-center font-bold">
               <Image src={logo} alt="Logo" width={32} height={32} />
             </div>
-            <div className="font-semibold">SKR Search Certificates</div>
+            <div className="font-semibold text-black">SKR Search Certificates</div>
           </div>
           <div className="flex gap-2">
             <button
@@ -253,7 +253,7 @@ export default function SearchPage() {
         <section className="bg-white rounded-2xl shadow-sm border p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="block">
-              <div className="text-sm font-medium text-slate-700 mb-1">กลุ่มสาระ</div>
+              <div className="text-sm font-medium text-black mb-1">กลุ่มสาระ</div>
               <select
                 className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                 value={cat.slug}
@@ -265,7 +265,7 @@ export default function SearchPage() {
 
             <label className="block md:col-span-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-slate-700 mb-1">ครูในหมวดนี้</div>
+                <div className="text-sm font-medium text-black mb-1">ครูในหมวดนี้</div>
                 {teachers.length > 0 && (
                   <span className="text-xs text-slate-500 mb-1">ทั้งหมด {teachers.length} คน</span>
                 )}
@@ -327,8 +327,8 @@ export default function SearchPage() {
 
                     <div className="text-sm space-y-1">
                       <div><span className="opacity-60">วันที่อบรม:</span> {formatDate(r.training_date)}</div>
-                      <div className="line-clamp-2"><span className="opacity-60">หัวข้อ:</span> {r.topic || '-'}</div>
-                      <div className="line-clamp-2"><span className="opacity-60">หน่วยงาน:</span> {r.organization || '-'}</div>
+                      <div className="line-clamp-2"><span className="opacity-60 text-black">หัวข้อ:</span> {r.topic || '-'}</div>
+                      <div className="line-clamp-2"><span className="opacity-60 text-black">หน่วยงาน:</span> {r.organization || '-'}</div>
                     </div>
 
                     <div className="text-xs opacity-60 mt-auto">
@@ -343,8 +343,8 @@ export default function SearchPage() {
           {!loading && searched && rows.length === 0 && (
             <div className="border rounded-2xl p-8 bg-white text-center text-slate-600">
               <div className="text-3xl mb-2">🔎</div>
-              <div className="font-medium">ไม่พบข้อมูลในเงื่อนไขที่เลือก</div>
-              <div className="text-sm mt-1">ลองเปลี่ยนหมวดหรือเลือก “ทั้งหมดในหมวด”</div>
+              <div className="font-medium text-black">ไม่พบข้อมูลในเงื่อนไขที่เลือก</div>
+              <div className="text-sm mt-1 text-black">ลองเปลี่ยนหมวดหรือเลือก “ทั้งหมดในหมวด”</div>
             </div>
           )}
 

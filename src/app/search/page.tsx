@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { CATEGORIES, Category } from '@/lib/categories'
 import Image from 'next/image'
 import logo from '../image.png'
+
 type Cert = {
   id: string
   category_slug: string
@@ -19,6 +20,7 @@ type Cert = {
   created_at: string
 }
 type Teacher = { id: string; full_name: string; slug: string }
+
 const ALL_TEACHERS_VALUE = '__ALL__'
 
 export default function SearchPage() {
@@ -31,22 +33,85 @@ export default function SearchPage() {
   const [msg, setMsg] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
 
-  // โหลดรายชื่อครูของหมวดที่เลือก
+  // ---------- helpers ----------
+  function normalizeKey(p: string) {
+    let s = (p || '').trim()
+    try { s = decodeURIComponent(s) } catch {}
+    const m = s.match(/\/object\/(?:public|sign)\/[^/]+\/(.+)$/)
+    const raw = m ? m[1] : s
+    return raw.replace(/^\/+/, '').replace(/^public\//, '').replace(/^submissions\//, '')
+  }
+
+  // ---------- auth (optional guard แค่แจ้งผู้ใช้) ----------
+  useEffect(() => {
+    ;(async () => {
+      const { data } = await supabase.auth.getUser()
+      if (!data.user) {
+        setMsg('โปรดเข้าสู่ระบบก่อนใช้งาน')
+      }
+    })()
+  }, [])
+
+  // ---------- queries ----------
   async function fetchTeachersByCategory(categorySlug: string) {
-    const { data, error } = await supabase
-      .from('teachers')
-      .select('id, full_name, slug, teacher_categories!inner(category_slug)')
-      .eq('teacher_categories.category_slug', categorySlug)
-      .order('full_name', { ascending: true })
-    if (error) {
-      console.error(error)
+    setMsg(null)
+
+    // 1) พยายามใช้ inner-join ก่อน (ต้องมี FK ครบ)
+    try {
+      const { data, error } = await supabase
+        .from('teachers')
+        .select('id, full_name, slug, teacher_categories!inner(category_slug)')
+        .eq('teacher_categories.category_slug', categorySlug)
+        .order('full_name', { ascending: true })
+
+      if (error) throw error
+      if (data && data.length > 0) {
+        setTeachers(data as Teacher[])
+        setTeacherId(ALL_TEACHERS_VALUE)
+        return
+      }
+    } catch (e) {
+      // เงียบไว้แล้วไป fallback
+      console.warn('[teachers join] fallback:', e)
+    }
+
+    // 2) fallback: 2 คิวรี (ไม่ต้องพึ่ง FK)
+    try {
+      const { data: tc, error: e1 } = await supabase
+        .from('teacher_categories')
+        .select('teacher_id')
+        .eq('category_slug', categorySlug)
+
+      if (e1) throw e1
+
+      const ids = ((tc ?? []) as Array<{ teacher_id?: string }>)
+        .map((r) => r.teacher_id)
+        .filter(Boolean) as string[]
+
+      if (ids.length === 0) {
+        setTeachers([])
+        setTeacherId(ALL_TEACHERS_VALUE)
+        return
+      }
+
+      const { data: tchs, error: e2 } = await supabase
+        .from('teachers')
+        .select('id, full_name, slug')
+        .in('id', ids)
+        .order('full_name', { ascending: true })
+
+      if (e2) throw e2
+
+      setTeachers((tchs ?? []) as Teacher[])
+      setTeacherId(ALL_TEACHERS_VALUE)
+    } catch (e: any) {
+      console.error('[teachers fallback] error:', e?.message || e)
       setTeachers([])
       setTeacherId(ALL_TEACHERS_VALUE)
-      return
+      setMsg(
+        e?.message?.includes('permission') ? 'ไม่มีสิทธิ์อ่านข้อมูล (RLS)' : 'โหลดรายชื่อครูไม่สำเร็จ'
+      )
     }
-    const list = (data ?? []) as Teacher[]
-    setTeachers(list)
-    setTeacherId(ALL_TEACHERS_VALUE)
   }
 
   useEffect(() => {
@@ -66,7 +131,9 @@ export default function SearchPage() {
 
     let q = supabase
       .from('certificates')
-      .select('id,category_slug,teacher_full_name,teacher_slug,file_path,mime,training_date,topic,organization,created_at')
+      .select(
+        'id,category_slug,teacher_full_name,teacher_slug,file_path,mime,training_date,topic,organization,created_at'
+      )
       .eq('category_slug', cat.slug)
       .order('training_date', { ascending: false })
       .limit(1000)
@@ -87,12 +154,26 @@ export default function SearchPage() {
     try { return new Date(d).toLocaleDateString('th-TH') } catch { return d }
   }
 
+  // เปิดไฟล์ด้วย signed URL
   async function openFile(path: string) {
-    const { data, error } = await supabase.storage.from('submissions').createSignedUrl(path, 300)
-    if (error || !data?.signedUrl) {
-      setMsg(error?.message || 'ไม่สามารถเปิดไฟล์ได้'); return
+    try {
+      if (!path) { setMsg('เส้นทางไฟล์ไม่ถูกต้อง'); return }
+      if (/^https?:\/\//i.test(path)) { window.open(path, '_blank'); return }
+      const key = normalizeKey(path)
+
+      const { data, error } = await supabase
+        .storage
+        .from('submissions')
+        .createSignedUrl(key, 300)
+
+      if (error || !data?.signedUrl) {
+        setMsg(error?.message || 'ไม่สามารถเปิดไฟล์ได้')
+        return
+      }
+      window.open(data.signedUrl, '_blank')
+    } catch (e: any) {
+      setMsg(e?.message || 'เกิดข้อผิดพลาดขณะเปิดไฟล์')
     }
-    window.open(data.signedUrl, '_blank')
   }
 
   async function handleSignOut() {
@@ -100,7 +181,7 @@ export default function SearchPage() {
     location.href = '/'
   }
 
-  // ไอคอน
+  // ---------- UI bits ----------
   function PdfIcon() {
     return (
       <svg viewBox="0 0 24 24" className="h-5 w-5 text-red-600" fill="currentColor" aria-hidden="true">
@@ -117,7 +198,6 @@ export default function SearchPage() {
     )
   }
 
-  // สเกลเลตันโหลดการ์ด
   function CardSkeleton() {
     return (
       <div className="border rounded-xl p-4 animate-pulse bg-white">
@@ -142,7 +222,7 @@ export default function SearchPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => (location.href = 'https://skr-teacher-certificated.vercel.app/upload')}
+              onClick={() => (location.href = '/upload')}
               className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               อัปโหลดใบประกาศ
@@ -211,14 +291,12 @@ export default function SearchPage() {
 
         {/* ผลลัพธ์ */}
         <section>
-          {/* กำลังโหลด: โชว์ skeleton */}
           {loading && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({length:6}).map((_,i)=><CardSkeleton key={i} />)}
             </div>
           )}
 
-          {/* มีผลลัพธ์ */}
           {!loading && rows.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {rows.map(r => {
@@ -251,7 +329,6 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* ว่างเปล่า */}
           {!loading && searched && rows.length === 0 && (
             <div className="border rounded-2xl p-8 bg-white text-center text-slate-600">
               <div className="text-3xl mb-2">🔎</div>
@@ -260,7 +337,6 @@ export default function SearchPage() {
             </div>
           )}
 
-          {/* ยังไม่กดค้นหา */}
           {!loading && !searched && (
             <div className="border rounded-2xl p-8 bg-white text-center text-slate-600">
               เลือกกลุ่มสาระและรายชื่อครู แล้วกดปุ่ม <span className="font-medium">ค้นหา</span>

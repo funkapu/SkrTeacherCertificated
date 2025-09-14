@@ -10,6 +10,7 @@ export const CATEGORIES = [
   { label: 'ศูนย์เทคโนโลยีสารสนเทศฯ', slug: 'ict-center' },
   { label: 'งานแนะแนว',               slug: 'guidance' },
   { label: 'งานห้องสมุด',             slug: 'library' },
+  { label: 'ผู้บริหาร',             slug: 'executive' },
 ] as const;
 
 export type Category = typeof CATEGORIES[number];

@@ -8,7 +8,7 @@ export default function Page() {
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `https://skr-teacher-certificated.vercel.app/auth/callback`,
+        redirectTo: `http://localhost:3000/auth/callback`,
         scopes: "email profile",
       },
     });

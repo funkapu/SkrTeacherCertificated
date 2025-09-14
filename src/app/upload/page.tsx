@@ -23,6 +23,9 @@ const EMPTY: CertInput = {
   organization: "",
 };
 
+const s = await supabase.auth.getSession();
+console.log(!!s.data.session, s.data.session?.user?.id);
+
 function bytes(n?: number | null) {
   if (!n) return "—";
   const units = ["B", "KB", "MB", "GB"];

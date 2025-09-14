@@ -196,7 +196,7 @@ export default function UploadPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => (location.href = "/search")}
+              onClick={() => (location.href = "https://skr-teacher-certificated.vercel.app/search")}
               className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               ค้นหาใบประกาศ

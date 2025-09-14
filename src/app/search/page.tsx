@@ -104,13 +104,20 @@ export default function SearchPage() {
 
       setTeachers((tchs ?? []) as Teacher[])
       setTeacherId(ALL_TEACHERS_VALUE)
-    } catch (e: any) {
-      console.error('[teachers fallback] error:', e?.message || e)
+    } catch (e: unknown) {
+      let msg = 'โหลดรายชื่อครูไม่สำเร็จ';
+      if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
+        const errMsg = (e as { message: string }).message;
+        console.error('[teachers fallback] error:', errMsg);
+        if (errMsg.includes('permission')) {
+          msg = 'ไม่มีสิทธิ์อ่านข้อมูล (RLS)';
+        }
+      } else {
+        console.error('[teachers fallback] error:', e);
+      }
       setTeachers([])
       setTeacherId(ALL_TEACHERS_VALUE)
-      setMsg(
-        e?.message?.includes('permission') ? 'ไม่มีสิทธิ์อ่านข้อมูล (RLS)' : 'โหลดรายชื่อครูไม่สำเร็จ'
-      )
+      setMsg(msg)
     }
   }
 
@@ -171,8 +178,12 @@ export default function SearchPage() {
         return
       }
       window.open(data.signedUrl, '_blank')
-    } catch (e: any) {
-      setMsg(e?.message || 'เกิดข้อผิดพลาดขณะเปิดไฟล์')
+    } catch (e: unknown) {
+      if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
+        setMsg((e as { message: string }).message);
+      } else {
+        setMsg('เกิดข้อผิดพลาดขณะเปิดไฟล์');
+      }
     }
   }
 
@@ -222,7 +233,7 @@ export default function SearchPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => (location.href = '/upload')}
+              onClick={() => (location.href = 'https://skr-teacher-certificated.vercel.app/upload')}
               className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               อัปโหลดใบประกาศ

@@ -45,7 +45,7 @@ export default function UploadPage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacher, setTeacher] = useState<Teacher | null>(null);
   const [certs, setCerts] = useState<CertInput[]>(
-    Array.from({ length: 5 }, () => ({ ...EMPTY }))
+    Array.from({ length: 1 }, () => ({ ...EMPTY }))
   );
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -120,6 +120,16 @@ export default function UploadPage() {
     );
   }
 
+  function addCert() {
+    setCerts((prev) => [...prev, { ...EMPTY }]);
+  }
+
+  function removeCert(idx: number) {
+    if (certs.length > 1) {
+      setCerts((prev) => prev.filter((_, i) => i !== idx));
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!teacher) return setMsg("กรุณาเลือกครู");
@@ -165,8 +175,8 @@ export default function UploadPage() {
         });
         if (dbErr) throw dbErr;
       }
-      setMsg("✅ อัปโหลดสำเร็จ");
-      setCerts(Array.from({ length: 5 }, () => ({ ...EMPTY })));
+      setMsg(`✅ อัปโหลดสำเร็จ ${items.length} ไฟล์`);
+      setCerts(Array.from({ length: 1 }, () => ({ ...EMPTY })));
     } catch (err: unknown) {
       if (err instanceof Error) {
         setMsg(`❌ ล้มเหลว: ${err.message}`);
@@ -196,7 +206,10 @@ export default function UploadPage() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => (location.href = "https://skr-teacher-certificated.vercel.app/search")}
+              onClick={() =>
+                (location.href =
+                  "https://skr-teacher-certificated.vercel.app/search")
+              }
               className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               ค้นหาใบประกาศ
@@ -218,7 +231,7 @@ export default function UploadPage() {
             อัปโหลดใบประกาศ (เลือกครูตามหมวด)
           </h1>
           <p className="text-slate-600 text-sm mt-1">
-            อัปโหลดได้สูงสุดครั้งละ 5 ไฟล์ — รองรับลากวาง (Drag &amp; Drop)
+            อัปโหลดใบประกาศได้หลายไฟล์ — รองรับลากวาง (Drag &amp; Drop)
           </p>
         </div>
 
@@ -282,15 +295,39 @@ export default function UploadPage() {
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-medium">ใบที่ {i + 1}</div>
-                    {isPicked ? (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
-                        เลือกไฟล์แล้ว
-                      </span>
-                    ) : (
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
-                        ยังไม่เลือก
-                      </span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {certs.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeCert(i)}
+                          className="text-red-500 hover:text-red-700 text-sm px-2 py-1 rounded hover:bg-red-50 transition"
+                          title="ลบช่องนี้"
+                        >
+                          <svg
+                            className="h-4 w-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M6 18L18 6M6 6l12 12"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                      {isPicked ? (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
+                          เลือกไฟล์แล้ว
+                        </span>
+                      ) : (
+                        <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                          ยังไม่เลือก
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Drop zone */}
@@ -387,6 +424,52 @@ export default function UploadPage() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Add/Remove controls */}
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={addCert}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 transition"
+            >
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
+              เพิ่มช่องอัปโหลด
+            </button>
+            {certs.length > 1 && (
+              <button
+                type="button"
+                onClick={() => removeCert(certs.length - 1)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition"
+              >
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M20 12H4"
+                  />
+                </svg>
+                ลบช่องสุดท้าย
+              </button>
+            )}
           </div>
 
           {/* Submit */}

@@ -167,14 +167,44 @@ export default function SearchPage() {
   }
 
   async function openFile(path: string) {
-    const { data, error } = await supabase.storage
-      .from("submissions")
-      .createSignedUrl(path, 300);
-    if (error || !data?.signedUrl) {
-      setMsg(error?.message || "ไม่สามารถเปิดไฟล์ได้");
+    console.log("Attempting to open file with path:", path);
+
+    if (!path || path.trim() === "") {
+      setMsg("เส้นทางไฟล์ไม่ถูกต้อง");
       return;
     }
-    window.open(data.signedUrl, "_blank");
+
+    try {
+      const { data, error } = await supabase.storage
+        .from("submissions")
+        .createSignedUrl(path.trim(), 300);
+
+      if (error) {
+        console.error("Storage error for path:", path, "Error:", error);
+        if (error.message.includes("requested path is invalid")) {
+          setMsg(
+            `ไฟล์นี้ไม่พบในระบบ: ${
+              path.split("/").pop() || "ไฟล์นี้"
+            } อาจถูกลบไปแล้ว`
+          );
+        } else {
+          setMsg(`ไม่สามารถเปิดไฟล์ได้: ${error.message}`);
+        }
+        return;
+      }
+
+      if (!data?.signedUrl) {
+        console.error("No signed URL returned for path:", path);
+        setMsg("ไม่สามารถสร้างลิงก์ไฟล์ได้");
+        return;
+      }
+
+      console.log("Successfully created signed URL for:", path);
+      window.open(data.signedUrl, "_blank");
+    } catch (err) {
+      console.error("Unexpected error opening file:", path, err);
+      setMsg("เกิดข้อผิดพลาดในการเปิดไฟล์");
+    }
   }
 
   async function handleSignOut() {
@@ -348,7 +378,15 @@ export default function SearchPage() {
                         className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
                         title={isPdf ? "เปิดไฟล์ PDF" : "เปิดไฟล์"}
                       >
-                        {isPdf ? <div className="flex justify-center"><PdfIcon /></div> : <div className="flex justify-center"><FileIcon /></div>}
+                        {isPdf ? (
+                          <div className="flex justify-center">
+                            <PdfIcon />
+                          </div>
+                        ) : (
+                          <div className="flex justify-center">
+                            <FileIcon />
+                          </div>
+                        )}
                         <p>คลิกเพื่อดูไฟล์</p>
                       </button>
                     </div>

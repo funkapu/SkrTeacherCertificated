@@ -1,6 +1,7 @@
 "use client";
 import { supabase } from "@/lib/supabase";
 import Image from "next/image";
+import Link from "next/link";
 import logo from "./image.png";
 
 export default function Page() {
@@ -12,9 +13,11 @@ export default function Page() {
         redirectTo,
         scopes: "email profile",
         queryParams: {
-          // Setting up a query parameter to indicate redirect destination
           access_type: "offline",
-          prompt: "consent",
+          prompt: "select_account",
+          // Additional parameters to help with embedded browsers
+          include_granted_scopes: "true",
+          response_type: "code",
         },
       },
     });
@@ -37,6 +40,12 @@ export default function Page() {
         >
           ลงชื่อเข้าใช้ด้วย Google
         </button>
+        <div className="text-sm text-gray-600">
+          หรือ{" "}
+          <Link href="/login" className="text-blue-600 hover:underline">
+            เข้าสู่ระบบด้วยอีเมล
+          </Link>
+        </div>
       </div>
     </main>
   );

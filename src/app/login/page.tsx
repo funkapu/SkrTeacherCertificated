@@ -16,7 +16,7 @@ export default function LoginPage() {
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
-          emailRedirectTo: `https://skr-teacher-certificated.vercel.app/auth/callback`,
+          emailRedirectTo: `${location.origin}/auth/callback`,
         },
       });
       if (error) throw error;

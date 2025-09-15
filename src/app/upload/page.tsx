@@ -230,9 +230,6 @@ export default function UploadPage() {
           <h1 className="text-2xl font-bold tracking-tight">
             อัปโหลดใบประกาศ (เลือกครูตามหมวด)
           </h1>
-          <p className="text-slate-600 text-sm mt-1">
-            อัปโหลดใบประกาศได้หลายไฟล์ — รองรับลากวาง (Drag &amp; Drop)
-          </p>
         </div>
 
         {/* Form Card */}
@@ -337,7 +334,6 @@ export default function UploadPage() {
                   >
                     <label className="w-full flex flex-col items-center justify-center text-center cursor-pointer">
                       <div className="text-slate-500">
-                        <div className="text-sm">ลากไฟล์มาวางที่นี่ หรือ</div>
                         <div className="inline-flex mt-1 px-3 py-1 rounded bg-blue-600 text-white text-sm">
                           เลือกไฟล์จากเครื่อง
                         </div>

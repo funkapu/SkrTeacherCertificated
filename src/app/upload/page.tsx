@@ -360,7 +360,7 @@ export default function UploadPage() {
                       />
                     </label>
                     <label className="block sm:col-span-2">
-                      <div className="text-sm text-slate-700 mb-1">
+                      <div className="text-sm text-black mb-1">
                         หัวข้อที่อบรม
                       </div>
                       <input

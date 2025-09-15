@@ -231,9 +231,10 @@ export default function AdminExportPage() {
     ].join(",");
     const lines: string[] = [header];
     for (const r of rows) {
+      const key = (r.file_path || "").replace(/^\/+/, "").trim();
       const { data, error } = await supabase.storage
         .from("submissions")
-        .createSignedUrl(r.file_path, 600);
+        .createSignedUrl(key, 600);
       if (error) {
         setMsg(error.message);
         return;
@@ -296,9 +297,10 @@ export default function AdminExportPage() {
     await mapLimit(imgs, 4, async (r) => {
       try {
         // 1) ขอ signed URL อายุ 15 นาที
+        const key = (r.file_path || "").replace(/^\/+/, "").trim();
         const { data, error } = await supabase.storage
           .from("submissions")
-          .createSignedUrl(r.file_path, 900);
+          .createSignedUrl(key, 900);
         if (error || !data?.signedUrl)
           throw new Error(error?.message || "signed url failed");
 

@@ -5,10 +5,11 @@ import logo from "./image.png";
 
 export default function Page() {
   async function signInWithGoogle() {
+    const redirectTo = `${location.origin}/auth/callback`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `https://skr-teacher-certificated.vercel.app/auth/callback`,
+        redirectTo,
         scopes: "email profile",
       },
     });
@@ -25,7 +26,7 @@ export default function Page() {
           className="mx-auto" // จัดให้อยู่กึ่งกลาง
         />
         <h1 className="text-2xl font-bold">
-          ศูนย์เทคโนโลยีสารสนเทศ โรงเรียนสวนกุหลาบวิทยาลัยรังสิต
+          ระบบงานสารสนเทศ
         </h1>
         <button
           onClick={signInWithGoogle}

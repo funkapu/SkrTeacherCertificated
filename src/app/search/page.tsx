@@ -1,212 +1,186 @@
 // app/search/page.tsx
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { CATEGORIES, Category } from '@/lib/categories'
-import Image from 'next/image'
-import logo from '../image.png'
-
+import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { CATEGORIES, Category } from "@/lib/categories";
+import Image from "next/image";
+import logo from "../image.png";
 type Cert = {
-  id: string
-  category_slug: string
-  teacher_full_name: string
-  teacher_slug: string | null
-  file_path: string
-  mime: string | null
-  training_date: string
-  topic: string
-  organization: string
-  created_at: string
-}
-type Teacher = { id: string; full_name: string; slug: string }
-
-const ALL_TEACHERS_VALUE = '__ALL__'
+  id: string;
+  category_slug: string;
+  teacher_full_name: string;
+  teacher_slug: string | null;
+  file_path: string;
+  mime: string | null;
+  training_date: string;
+  topic: string;
+  organization: string;
+  created_at: string;
+};
+type Teacher = { id: string; full_name: string; slug: string };
+const ALL_TEACHERS_VALUE = "__ALL__";
 
 export default function SearchPage() {
-  const [cat, setCat] = useState<Category>(CATEGORIES[0])
-  const [teachers, setTeachers] = useState<Teacher[]>([])
-  const [teacherId, setTeacherId] = useState<string>(ALL_TEACHERS_VALUE)
+  const [cat, setCat] = useState<Category>(CATEGORIES[0]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [teacherId, setTeacherId] = useState<string>(ALL_TEACHERS_VALUE);
 
-  const [rows, setRows] = useState<Cert[]>([])
-  const [loading, setLoading] = useState(false)
-  const [msg, setMsg] = useState<string | null>(null)
-  const [searched, setSearched] = useState(false)
+  const [rows, setRows] = useState<Cert[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [searched, setSearched] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Cert | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
-  // ---------- helpers ----------
-  function normalizeKey(p: string) {
-    let s = (p || '').trim()
-    try { s = decodeURIComponent(s) } catch {}
-    const m = s.match(/\/object\/(?:public|sign)\/[^/]+\/(.+)$/)
-    const raw = m ? m[1] : s
-    return raw.replace(/^\/+/, '').replace(/^public\//, '').replace(/^submissions\//, '')
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setMsg(null);
+    // ลบจาก storage
+    const { error: delErr } = await supabase.storage
+      .from("submissions")
+      .remove([deleteTarget.file_path]);
+    if (delErr) {
+      setMsg("ลบไฟล์ storage ไม่สำเร็จ: " + delErr.message);
+      setDeleting(false);
+      return;
+    }
+    // ลบจาก DB
+    const { error: dbErr } = await supabase
+      .from("certificates")
+      .delete()
+      .eq("id", deleteTarget.id);
+    if (dbErr) {
+      setMsg("ลบ DB ไม่สำเร็จ: " + dbErr.message);
+      setDeleting(false);
+      return;
+    }
+    setRows((rows: Cert[]) =>
+      rows.filter((x: Cert) => x.id !== deleteTarget.id)
+    );
+    setMsg("ลบไฟล์สำเร็จ");
+    setDeleting(false);
+    setDeleteTarget(null);
   }
 
-  // ---------- auth (optional guard แค่แจ้งผู้ใช้) ----------
+  // โหลดรายชื่อครูของหมวดที่เลือก - ใช้ useCallback ป้องกัน re-render
+  const fetchTeachersByCategory = useCallback(async (categorySlug: string) => {
+    const { data, error } = await supabase
+      .from("teachers")
+      .select("id, full_name, slug, teacher_categories!inner(category_slug)")
+      .eq("teacher_categories.category_slug", categorySlug)
+      .order("full_name", { ascending: true });
+    if (error) {
+      console.error(error);
+      setTeachers([]);
+      return;
+    }
+    const list = (data ?? []) as Teacher[];
+    setTeachers(list);
+  }, []);
+
+  // รีเซ็ตครูที่เลือกเมื่อเปลี่ยนกลุ่มสาระ
   useEffect(() => {
-    ;(async () => {
-      const { data } = await supabase.auth.getUser()
-      if (!data.user) {
-        setMsg('โปรดเข้าสู่ระบบก่อนใช้งาน')
-      }
-    })()
-  }, [])
-
-  // ---------- queries ----------
-  async function fetchTeachersByCategory(categorySlug: string) {
-    setMsg(null)
-
-    // 1) พยายามใช้ inner-join ก่อน (ต้องมี FK ครบ)
-    try {
-      const { data, error } = await supabase
-        .from('teachers')
-        .select('id, full_name, slug, teacher_categories!inner(category_slug)')
-        .eq('teacher_categories.category_slug', categorySlug)
-        .order('full_name', { ascending: true })
-
-      if (error) throw error
-      if (data && data.length > 0) {
-        setTeachers(data as Teacher[])
-        setTeacherId(ALL_TEACHERS_VALUE)
-        return
-      }
-    } catch (e) {
-      // เงียบไว้แล้วไป fallback
-      console.warn('[teachers join] fallback:', e)
-    }
-
-    // 2) fallback: 2 คิวรี (ไม่ต้องพึ่ง FK)
-    try {
-      const { data: tc, error: e1 } = await supabase
-        .from('teacher_categories')
-        .select('teacher_id')
-        .eq('category_slug', categorySlug)
-
-      if (e1) throw e1
-
-      const ids = ((tc ?? []) as Array<{ teacher_id?: string }>)
-        .map((r) => r.teacher_id)
-        .filter(Boolean) as string[]
-
-      if (ids.length === 0) {
-        setTeachers([])
-        setTeacherId(ALL_TEACHERS_VALUE)
-        return
-      }
-
-      const { data: tchs, error: e2 } = await supabase
-        .from('teachers')
-        .select('id, full_name, slug')
-        .in('id', ids)
-        .order('full_name', { ascending: true })
-
-      if (e2) throw e2
-
-      setTeachers((tchs ?? []) as Teacher[])
-      setTeacherId(ALL_TEACHERS_VALUE)
-    } catch (e: unknown) {
-      let msg = 'โหลดรายชื่อครูไม่สำเร็จ';
-      if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
-        const errMsg = (e as { message: string }).message;
-        console.error('[teachers fallback] error:', errMsg);
-        if (errMsg.includes('permission')) {
-          msg = 'ไม่มีสิทธิ์อ่านข้อมูล (RLS)';
-        }
-      } else {
-        console.error('[teachers fallback] error:', e);
-      }
-      setTeachers([])
-      setTeacherId(ALL_TEACHERS_VALUE)
-      setMsg(msg)
-    }
-  }
+    setTeacherId(ALL_TEACHERS_VALUE);
+  }, [cat]);
 
   useEffect(() => {
-    fetchTeachersByCategory(cat.slug)
-  }, [cat.slug])
+    let alive = true;
+    (async () => {
+      await fetchTeachersByCategory(cat.slug);
+      if (!alive) return;
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [fetchTeachersByCategory, cat.slug]);
 
   function resultLabel(n: number) {
-    if (!searched) return ''
-    if (loading) return 'กำลังค้นหา…'
-    if (n === 0) return 'ยังไม่พบเกียรติบัตร'
-    if (n === 1) return 'เกียรติบัตรที่อัปโหลด 1 รายการ'
-    return `เกียรติบัตรที่อัปโหลด ${n} รายการ`
+    if (!searched) return "";
+    if (loading) return "กำลังค้นหา…";
+    if (n === 0) return "ยังไม่พบเกียรติบัตร";
+    if (n === 1) return "เกียรติบัตรที่อัปโหลด 1 รายการ";
+    return `เกียรติบัตรที่อัปโหลด ${n} รายการ`;
   }
 
   async function handleSearch() {
-    setLoading(true); setMsg(null); setSearched(true)
+    setLoading(true);
+    setMsg(null);
+    setSearched(true);
 
     let q = supabase
-      .from('certificates')
+      .from("certificates")
       .select(
-        'id,category_slug,teacher_full_name,teacher_slug,file_path,mime,training_date,topic,organization,created_at'
+        "id,category_slug,teacher_full_name,teacher_slug,file_path,mime,training_date,topic,organization,created_at"
       )
-      .eq('category_slug', cat.slug)
-      .order('training_date', { ascending: false })
-      .limit(1000)
+      .eq("category_slug", cat.slug)
+      .order("training_date", { ascending: false })
+      .limit(1000);
 
     if (teacherId !== ALL_TEACHERS_VALUE) {
-      const chosen = teachers.find(t => t.id === teacherId)
-      if (chosen) q = q.eq('teacher_slug', chosen.slug)
+      const chosen = teachers.find((t) => t.id === teacherId);
+      if (chosen) q = q.eq("teacher_slug", chosen.slug);
     }
 
-    const { data, error } = await q
-    if (error) setMsg(error.message)
-    setRows((data ?? []) as Cert[])
-    setLoading(false)
+    const { data, error } = await q;
+    if (error) setMsg(error.message);
+    setRows((data ?? []) as Cert[]);
+    setLoading(false);
   }
 
   function formatDate(d: string) {
-    if (!d) return '-'
-    try { return new Date(d).toLocaleDateString('th-TH') } catch { return d }
-  }
-
-  // เปิดไฟล์ด้วย signed URL
-  async function openFile(path: string) {
+    if (!d) return "-";
     try {
-      if (!path) { setMsg('เส้นทางไฟล์ไม่ถูกต้อง'); return }
-      if (/^https?:\/\//i.test(path)) { window.open(path, '_blank'); return }
-      const key = normalizeKey(path)
-
-      const { data, error } = await supabase
-        .storage
-        .from('submissions')
-        .createSignedUrl(key, 300)
-
-      if (error || !data?.signedUrl) {
-        setMsg(error?.message || 'ไม่สามารถเปิดไฟล์ได้')
-        return
-      }
-      window.open(data.signedUrl, '_blank')
-    } catch (e: unknown) {
-      if (typeof e === 'object' && e !== null && 'message' in e && typeof (e as { message: unknown }).message === 'string') {
-        setMsg((e as { message: string }).message);
-      } else {
-        setMsg('เกิดข้อผิดพลาดขณะเปิดไฟล์');
-      }
+      return new Date(d).toLocaleDateString("th-TH");
+    } catch {
+      return d;
     }
   }
 
+  async function openFile(path: string) {
+    const { data, error } = await supabase.storage
+      .from("submissions")
+      .createSignedUrl(path, 300);
+    if (error || !data?.signedUrl) {
+      setMsg(error?.message || "ไม่สามารถเปิดไฟล์ได้");
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
+  }
+
   async function handleSignOut() {
-    await supabase.auth.signOut()
-    location.href = '/'
+    await supabase.auth.signOut();
+    location.href = "/";
   }
 
   // ---------- UI bits ----------
   function PdfIcon() {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5 text-red-600" fill="currentColor" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 text-red-600"
+        fill="currentColor"
+        aria-hidden="true"
+      >
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <text x="6" y="18" fontSize="7" fontFamily="Arial" fill="currentColor">PDF</text>
+        <text x="6" y="18" fontSize="7" fontFamily="Arial" fill="currentColor">
+          PDF
+        </text>
       </svg>
-    )
+    );
   }
   function FileIcon() {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5 text-gray-700" fill="currentColor" aria-hidden="true">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 text-gray-700"
+        fill="currentColor"
+        aria-hidden="true"
+      >
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
       </svg>
-    )
+    );
   }
 
   function CardSkeleton() {
@@ -217,7 +191,7 @@ export default function SearchPage() {
         <div className="h-3 w-1/3 bg-slate-200 rounded mb-2" />
         <div className="h-3 w-1/2 bg-slate-200 rounded" />
       </div>
-    )
+    );
   }
 
   return (
@@ -226,14 +200,16 @@ export default function SearchPage() {
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur border-b">
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg  text-white grid place-items-center font-bold">
+            <div className="h-8 w-8 rounded-lg text-white grid place-items-center font-bold">
               <Image src={logo} alt="Logo" width={32} height={32} />
             </div>
-            <div className="font-semibold text-black">SKR Search Certificates</div>
+            <div className="font-semibold text-black">
+              SKR Search Certificates
+            </div>
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => (location.href = 'https://skr-teacher-certificated.vercel.app/upload')}
+              onClick={() => (location.href = "/upload")}
               className="px-3 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition"
             >
               อัปโหลดใบประกาศ
@@ -253,31 +229,45 @@ export default function SearchPage() {
         <section className="bg-white rounded-2xl shadow-sm border p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="block">
-              <div className="text-sm font-medium text-black mb-1">กลุ่มสาระ</div>
+              <div className="text-sm font-medium text-slate-700 mb-1">
+                กลุ่มสาระ
+              </div>
               <select
                 className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                 value={cat.slug}
-                onChange={(e)=>setCat(CATEGORIES.find(c=>c.slug===e.target.value)!)}
+                onChange={(e) =>
+                  setCat(CATEGORIES.find((c) => c.slug === e.target.value)!)
+                }
               >
-                {CATEGORIES.map(c => <option key={c.slug} value={c.slug}>{c.label}</option>)}
+                {CATEGORIES.map((c) => (
+                  <option key={c.slug} value={c.slug}>
+                    {c.label}
+                  </option>
+                ))}
               </select>
             </label>
 
             <label className="block md:col-span-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-black mb-1">ครูในหมวดนี้</div>
+                <div className="text-sm font-medium text-slate-700 mb-1">
+                  ครูในหมวดนี้
+                </div>
                 {teachers.length > 0 && (
-                  <span className="text-xs text-slate-500 mb-1">ทั้งหมด {teachers.length} คน</span>
+                  <span className="text-xs text-slate-500 mb-1">
+                    ทั้งหมด {teachers.length} คน
+                  </span>
                 )}
               </div>
               <select
                 className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                 value={teacherId}
-                onChange={(e)=>setTeacherId(e.target.value)}
+                onChange={(e) => setTeacherId(e.target.value)}
               >
-                <option value={ALL_TEACHERS_VALUE} className='text-black'>— ทั้งหมดในหมวด —</option>
-                {teachers.map(t => (
-                  <option key={t.id} value={t.id} className='text-black'>{t.full_name}</option>
+                <option value={ALL_TEACHERS_VALUE}>— ทั้งหมดในหมวด —</option>
+                {teachers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.full_name}
+                  </option>
                 ))}
               </select>
             </label>
@@ -288,7 +278,9 @@ export default function SearchPage() {
               onClick={handleSearch}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
             >
-              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M10 2a8 8 0 105.293 14.293l4.707 4.707 1.414-1.414-4.707-4.707A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z"/></svg>
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M10 2a8 8 0 105.293 14.293l4.707 4.707 1.414-1.414-4.707-4.707A8 8 0 0010 2zm0 2a6 6 0 110 12A6 6 0 0110 4z" />
+              </svg>
               ค้นหา
             </button>
             {!!resultLabel(rows.length) && (
@@ -304,38 +296,113 @@ export default function SearchPage() {
         <section>
           {loading && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({length:6}).map((_,i)=><CardSkeleton key={i} />)}
+              {Array.from({ length: 6 }).map((_, i) => (
+                <CardSkeleton key={i} />
+              ))}
             </div>
           )}
 
           {!loading && rows.length > 0 && (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {rows.map(r => {
-                const isPdf = (r.mime ?? '').toLowerCase().includes('pdf')
+              {rows.map((r) => {
+                const isPdf = (r.mime ?? "").toLowerCase().includes("pdf");
                 return (
-                  <div key={r.id} className="border rounded-xl p-4 bg-white shadow-sm hover:shadow transition flex flex-col gap-3">
+                  <div
+                    key={r.id}
+                    className="border rounded-xl p-4 bg-white shadow-sm hover:shadow transition flex flex-col gap-3 relative"
+                  >
                     <div className="flex items-start justify-between gap-2">
-                      <div className="font-semibold leading-tight line-clamp-2">{r.teacher_full_name}</div>
+                      <div className="font-semibold leading-tight line-clamp-2">
+                        {r.teacher_full_name}
+                      </div>
                       <button
-                        onClick={()=>openFile(r.file_path)}
+                        onClick={() => openFile(r.file_path)}
                         className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
-                        title={isPdf ? 'เปิดไฟล์ PDF' : 'เปิดไฟล์'}
+                        title={isPdf ? "เปิดไฟล์ PDF" : "เปิดไฟล์"}
                       >
                         {isPdf ? <PdfIcon /> : <FileIcon />}
                       </button>
                     </div>
 
                     <div className="text-sm space-y-1">
-                      <div><span className="opacity-60">วันที่อบรม:</span> {formatDate(r.training_date)}</div>
-                      <div className="line-clamp-2"><span className="opacity-60 text-black">หัวข้อ:</span> {r.topic || '-'}</div>
-                      <div className="line-clamp-2"><span className="opacity-60 text-black">หน่วยงาน:</span> {r.organization || '-'}</div>
+                      <div>
+                        <span className="opacity-60">วันที่อบรม:</span>{" "}
+                        {formatDate(r.training_date)}
+                      </div>
+                      <div className="line-clamp-2">
+                        <span className="opacity-60">หัวข้อ:</span>{" "}
+                        {r.topic || "-"}
+                      </div>
+                      <div className="line-clamp-2">
+                        <span className="opacity-60">หน่วยงาน:</span>{" "}
+                        {r.organization || "-"}
+                      </div>
                     </div>
 
                     <div className="text-xs opacity-60 mt-auto">
                       {r.category_slug} • อัปโหลด {formatDate(r.created_at)}
                     </div>
+
+                    {/* ปุ่มลบขวาล่าง */}
+                    <button
+                      onClick={() => setDeleteTarget(r)}
+                      className="absolute bottom-3 right-3 p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 shadow"
+                      title="ลบไฟล์นี้"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                    {/* Modal ยืนยันลบ */}
+                    {deleteTarget && (
+                      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
+                          <div className="text-lg font-bold mb-2 text-red-600">
+                            ยืนยันการลบ
+                          </div>
+                          <div className="mb-4 text-sm text-slate-700">
+                            ต้องการลบไฟล์นี้จริงหรือไม่?
+                            <br />
+                            <span className="font-semibold">
+                              {deleteTarget.teacher_full_name}
+                            </span>
+                            <br />
+                            <span className="text-xs text-slate-500">
+                              {deleteTarget.topic}
+                            </span>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              className="px-3 py-2 rounded bg-slate-100 hover:bg-slate-200"
+                              onClick={() => setDeleteTarget(null)}
+                              disabled={deleting}
+                            >
+                              ยกเลิก
+                            </button>
+                            <button
+                              className="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60"
+                              onClick={handleDeleteConfirm}
+                              disabled={deleting}
+                            >
+                              {deleting ? "กำลังลบ…" : "ยืนยันลบ"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )
+                );
               })}
             </div>
           )}
@@ -343,18 +410,21 @@ export default function SearchPage() {
           {!loading && searched && rows.length === 0 && (
             <div className="border rounded-2xl p-8 bg-white text-center text-slate-600">
               <div className="text-3xl mb-2">🔎</div>
-              <div className="font-medium text-black">ไม่พบข้อมูลในเงื่อนไขที่เลือก</div>
-              <div className="text-sm mt-1 text-black">ลองเปลี่ยนหมวดหรือเลือก “ทั้งหมดในหมวด”</div>
+              <div className="font-medium">ไม่พบข้อมูลในเงื่อนไขที่เลือก</div>
+              <div className="text-sm mt-1">
+                ลองเปลี่ยนหมวดหรือเลือก “ทั้งหมดในหมวด”
+              </div>
             </div>
           )}
 
           {!loading && !searched && (
             <div className="border rounded-2xl p-8 bg-white text-center text-slate-600">
-              เลือกกลุ่มสาระและรายชื่อครู แล้วกดปุ่ม <span className="font-medium">ค้นหา</span>
+              เลือกกลุ่มสาระและรายชื่อครู แล้วกดปุ่ม{" "}
+              <span className="font-medium">ค้นหา</span>
             </div>
           )}
         </section>
       </main>
     </div>
-  )
+  );
 }

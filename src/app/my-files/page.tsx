@@ -49,11 +49,27 @@ export default function MyFilesPage() {
     );
 
   async function openSigned(name: string) {
-    const path = `${cat.slug}/${userId}/${name}`;
-    const { data } = await supabase.storage
-      .from("submissions")
-      .createSignedUrl(path, 60);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    const raw = `${cat.slug}/${userId}/${name}`;
+    const path = raw.replace(/^\/+/, "").trim();
+    try {
+      const { data, error } = await supabase.storage
+        .from("submissions")
+        .createSignedUrl(path, 60);
+      if (error) {
+        console.error("createSignedUrl error", { path, error });
+        setMsg(error.message || "ไม่สามารถสร้างลิงก์เข้าถึงไฟล์ได้");
+        return;
+      }
+      if (!data?.signedUrl) {
+        console.error("createSignedUrl returned no signedUrl", { path, data });
+        setMsg("ไม่พบไฟล์ หรือไม่สามารถสร้างลิงก์เข้าถึงได้");
+        return;
+      }
+      window.open(data.signedUrl, "_blank");
+    } catch (e) {
+      console.error("openSigned unexpected", e);
+      setMsg(e instanceof Error ? e.message : String(e));
+    }
   }
 
   try {

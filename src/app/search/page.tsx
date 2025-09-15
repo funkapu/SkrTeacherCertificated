@@ -246,7 +246,7 @@ export default function SearchPage() {
               onClick={handleSignOut}
               className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition"
             >
-              ล็อคเอ้าท์
+              Logout
             </button>
           </div>
         </div>
@@ -348,7 +348,8 @@ export default function SearchPage() {
                         className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200"
                         title={isPdf ? "เปิดไฟล์ PDF" : "เปิดไฟล์"}
                       >
-                        {isPdf ? <PdfIcon /> : <FileIcon />}
+                        {isPdf ? <div className="flex justify-center"><PdfIcon /></div> : <div className="flex justify-center"><FileIcon /></div>}
+                        <p>คลิกเพื่อดูไฟล์</p>
                       </button>
                     </div>
 
@@ -372,7 +373,7 @@ export default function SearchPage() {
                     </div>
 
                     {/* ปุ่มลบขวาล่าง */}
-                    <button
+                    {/* <button
                       onClick={() => setDeleteTarget(r)}
                       className="absolute bottom-3 right-3 p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 shadow"
                       title="ลบไฟล์นี้"
@@ -391,9 +392,9 @@ export default function SearchPage() {
                           d="M6 18L18 6M6 6l12 12"
                         />
                       </svg>
-                    </button>
+                    </button> */}
                     {/* Modal ยืนยันลบ */}
-                    {deleteTarget && (
+                    {/* {deleteTarget && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                         <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
                           <div className="text-lg font-bold mb-2 text-red-600">
@@ -428,7 +429,7 @@ export default function SearchPage() {
                           </div>
                         </div>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 );
               })}

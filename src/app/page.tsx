@@ -40,12 +40,6 @@ export default function Page() {
         >
           ลงชื่อเข้าใช้ด้วย Google
         </button>
-        <div className="text-sm text-gray-600">
-          หรือ{" "}
-          <Link href="/login" className="text-blue-600 hover:underline">
-            เข้าสู่ระบบด้วยอีเมล
-          </Link>
-        </div>
       </div>
     </main>
   );

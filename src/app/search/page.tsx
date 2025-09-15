@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, Category } from "@/lib/categories";
 import Image from "next/image";
@@ -22,10 +23,11 @@ type Teacher = { id: string; full_name: string; slug: string };
 const ALL_TEACHERS_VALUE = "__ALL__";
 
 export default function SearchPage() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [cat, setCat] = useState<Category>(CATEGORIES[0]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherId, setTeacherId] = useState<string>(ALL_TEACHERS_VALUE);
-
   const [rows, setRows] = useState<Cert[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -33,36 +35,12 @@ export default function SearchPage() {
   const [deleteTarget, setDeleteTarget] = useState<Cert | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function handleDeleteConfirm() {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    setMsg(null);
-    // ลบจาก storage
-    const { error: delErr } = await supabase.storage
-      .from("submissions")
-      .remove([deleteTarget.file_path]);
-    if (delErr) {
-      setMsg("ลบไฟล์ storage ไม่สำเร็จ: " + delErr.message);
-      setDeleting(false);
-      return;
-    }
-    // ลบจาก DB
-    const { error: dbErr } = await supabase
-      .from("certificates")
-      .delete()
-      .eq("id", deleteTarget.id);
-    if (dbErr) {
-      setMsg("ลบ DB ไม่สำเร็จ: " + dbErr.message);
-      setDeleting(false);
-      return;
-    }
-    setRows((rows: Cert[]) =>
-      rows.filter((x: Cert) => x.id !== deleteTarget.id)
-    );
-    setMsg("ลบไฟล์สำเร็จ");
-    setDeleting(false);
-    setDeleteTarget(null);
-  }
+  useEffect(() => {
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setUserId(data.user?.id ?? null))
+      .finally(() => setAuthLoading(false));
+  }, []);
 
   // โหลดรายชื่อครูของหมวดที่เลือก - ใช้ useCallback ป้องกัน re-render
   const fetchTeachersByCategory = useCallback(async (categorySlug: string) => {
@@ -95,6 +73,56 @@ export default function SearchPage() {
       alive = false;
     };
   }, [fetchTeachersByCategory, cat.slug]);
+
+  if (authLoading) {
+    return <div className="p-6">กำลังตรวจสอบสิทธิ์…</div>;
+  }
+  if (!userId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center space-y-3">
+          <h1 className="text-2xl font-bold">โปรดเข้าสู่ระบบ</h1>
+          <Link
+            href="/"
+            className="inline-block px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+          >
+            ไปหน้าเข้าสู่ระบบ
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    setMsg(null);
+    // ลบจาก storage
+    const { error: delErr } = await supabase.storage
+      .from("submissions")
+      .remove([deleteTarget.file_path]);
+    if (delErr) {
+      setMsg("ลบไฟล์ storage ไม่สำเร็จ: " + delErr.message);
+      setDeleting(false);
+      return;
+    }
+    // ลบจาก DB
+    const { error: dbErr } = await supabase
+      .from("certificates")
+      .delete()
+      .eq("id", deleteTarget.id);
+    if (dbErr) {
+      setMsg("ลบ DB ไม่สำเร็จ: " + dbErr.message);
+      setDeleting(false);
+      return;
+    }
+    setRows((rows: Cert[]) =>
+      rows.filter((x: Cert) => x.id !== deleteTarget.id)
+    );
+    setMsg("ลบไฟล์สำเร็จ");
+    setDeleting(false);
+    setDeleteTarget(null);
+  }
 
   function resultLabel(n: number) {
     if (!searched) return "";

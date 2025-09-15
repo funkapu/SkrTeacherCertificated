@@ -11,6 +11,11 @@ export default function Page() {
       options: {
         redirectTo,
         scopes: "email profile",
+        queryParams: {
+          // Setting up a query parameter to indicate redirect destination
+          access_type: "offline",
+          prompt: "consent",
+        },
       },
     });
   }
@@ -25,9 +30,7 @@ export default function Page() {
           height={200} // ปรับขนาดตามต้องการ
           className="mx-auto" // จัดให้อยู่กึ่งกลาง
         />
-        <h1 className="text-2xl font-bold">
-          ระบบงานสารสนเทศ
-        </h1>
+        <h1 className="text-2xl font-bold">ระบบงานสารสนเทศ</h1>
         <button
           onClick={signInWithGoogle}
           className="w-full border px-4 py-2 rounded bg-blue-500 text-white hover:bg-red-600 transition"

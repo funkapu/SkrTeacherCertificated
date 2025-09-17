@@ -118,7 +118,11 @@ export default function SearchPage() {
     setDeleting(true);
     setMsg(null);
 
-    console.log("Starting delete process for:", deleteTarget.id, deleteTarget.file_path);
+    console.log(
+      "Starting delete process for:",
+      deleteTarget.id,
+      deleteTarget.file_path
+    );
 
     // ลบจาก storage
     const { error: delErr } = await supabase.storage
@@ -134,10 +138,34 @@ export default function SearchPage() {
 
     console.log("Storage delete successful, now deleting from database");
 
-    // ลบจาก DB
-    const { error: dbErr } = await supabase
+    // ตรวจสอบก่อนว่ามี record นี้อยู่ใน database หรือไม่
+    const { data: existingRecord, error: checkErr } = await supabase
       .from("certificates")
-      .delete()
+      .select("id")
+      .eq("id", deleteTarget.id)
+      .single();
+
+    if (checkErr && checkErr.code !== 'PGRST116') { // PGRST116 = not found
+      console.error("Error checking existing record:", checkErr);
+    }
+
+    if (!existingRecord) {
+      console.warn("Record not found in database before delete");
+      setMsg("⚠️ ลบไฟล์ storage สำเร็จ แต่ไม่พบข้อมูลในฐานข้อมูล");
+      setRows((rows: Cert[]) =>
+        rows.filter((x: Cert) => x.id !== deleteTarget.id)
+      );
+      setDeleting(false);
+      setDeleteTarget(null);
+      return;
+    }
+
+    console.log("Record found in database, proceeding with delete");
+
+    // ลบจาก DB
+    const { error: dbErr, count } = await supabase
+      .from("certificates")
+      .delete({ count: 'exact' })
       .eq("id", deleteTarget.id);
 
     if (dbErr) {
@@ -147,11 +175,26 @@ export default function SearchPage() {
       return;
     }
 
+    console.log("Database delete result - count:", count);
+
+    if (count === 0) {
+      console.warn("No records were deleted from database");
+      setMsg("⚠️ ลบไฟล์ storage สำเร็จ แต่ไม่พบข้อมูลในฐานข้อมูลที่จะลบ");
+      setDeleting(false);
+      return;
+    }
+
     console.log("Database delete successful, updating UI");
 
     setRows((rows: Cert[]) =>
       rows.filter((x: Cert) => x.id !== deleteTarget.id)
     );
+
+    // รีเฟรชข้อมูลเพื่อให้แน่ใจว่าข้อมูลเป็นปัจจุบัน
+    setTimeout(() => {
+      handleSearch();
+    }, 500);
+
     setMsg("ลบไฟล์สำเร็จ");
     setDeleting(false);
     setDeleteTarget(null);

@@ -17,20 +17,20 @@ export default function CallbackPage() {
           setMsg("✅ เข้าสู่ระบบสำเร็จ กำลังพาไปหน้าค้นหา…");
           // ใช้ window.location แทน router เพื่อหลีกเลี่ยงปัญหา hash fragment
           setTimeout(() => {
-            window.location.href = '/search';
+            window.location.href = "/search";
           }, 800);
         } else {
           setMsg("❌ อีเมลนี้ไม่ได้รับอนุญาตให้เข้าถึงระบบ");
           // ออกจากระบบหลังจากแสดงข้อความ
           setTimeout(() => {
             supabase.auth.signOut();
-            window.location.href = '/';
+            window.location.href = "/";
           }, 3000);
         }
       } else {
         setMsg("❌ ลิงก์ไม่ถูกต้องหรือหมดอายุ");
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = "/";
         }, 2000);
       }
     });

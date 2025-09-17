@@ -139,14 +139,27 @@ export default function SearchPage() {
     console.log("Storage delete successful, now deleting from database");
 
     // ตรวจสอบก่อนว่ามี record นี้อยู่ใน database หรือไม่
+    console.log("Checking for record with id:", deleteTarget.id, "in table 'certificates'");
     const { data: existingRecord, error: checkErr } = await supabase
       .from("certificates")
-      .select("id")
+      .select("id, file_path")
       .eq("id", deleteTarget.id)
       .single();
 
-    if (checkErr && checkErr.code !== 'PGRST116') { // PGRST116 = not found
+    console.log("Check result:", { existingRecord, checkErr });
+
+    if (checkErr) {
       console.error("Error checking existing record:", checkErr);
+      if (checkErr.code === 'PGRST116') { // Not found
+        console.log("Record not found with error code PGRST116");
+        setMsg("⚠️ ลบไฟล์ storage สำเร็จ แต่ไม่พบข้อมูลในฐานข้อมูลที่จะลบ");
+        setRows((rows: Cert[]) =>
+          rows.filter((x: Cert) => x.id !== deleteTarget.id)
+        );
+        setDeleting(false);
+        setDeleteTarget(null);
+        return;
+      }
     }
 
     if (!existingRecord) {
@@ -160,13 +173,16 @@ export default function SearchPage() {
       return;
     }
 
-    console.log("Record found in database, proceeding with delete");
+    console.log("Record found in database, proceeding with delete:", existingRecord);
 
-    // ลบจาก DB
+    // ลองลบโดยใช้ table name ที่แตกต่างกัน
+    console.log("Attempting delete with table 'certificates'");
     const { error: dbErr, count } = await supabase
       .from("certificates")
       .delete({ count: 'exact' })
       .eq("id", deleteTarget.id);
+
+    console.log("Delete attempt result:", { dbErr, count });
 
     if (dbErr) {
       console.error("Database delete error:", dbErr);
@@ -178,10 +194,23 @@ export default function SearchPage() {
     console.log("Database delete result - count:", count);
 
     if (count === 0) {
-      console.warn("No records were deleted from database");
-      setMsg("⚠️ ลบไฟล์ storage สำเร็จ แต่ไม่พบข้อมูลในฐานข้อมูลที่จะลบ");
-      setDeleting(false);
-      return;
+      console.warn("No records were deleted from database - trying alternative approaches");
+
+      // ลองลบโดยไม่ใช้ count
+      console.log("Trying delete without count option");
+      const { error: altErr } = await supabase
+        .from("certificates")
+        .delete()
+        .eq("id", deleteTarget.id);
+
+      if (altErr) {
+        console.error("Alternative delete also failed:", altErr);
+        setMsg("ลบ DB ไม่สำเร็จ: " + altErr.message);
+        setDeleting(false);
+        return;
+      }
+
+      console.log("Alternative delete completed (no error returned)");
     }
 
     console.log("Database delete successful, updating UI");

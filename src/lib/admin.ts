@@ -1,5 +1,5 @@
 // อีเมลแอดมินพิเศษ (เข้าถึงได้ทุกอย่าง)
-export const ADMIN_EMAILS = ['funkfuze@gmail.com']
+export const ADMIN_EMAILS = ['funkfuze@gmail.com','nutsarun@skr.ac.th']
 
 // โดเมนที่อนุญาตให้เข้าถึงระบบ
 export const ALLOWED_DOMAINS = ['skr.ac.th']

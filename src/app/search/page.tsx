@@ -107,27 +107,48 @@ export default function SearchPage() {
 
   async function handleDeleteConfirm() {
     if (!deleteTarget) return;
+
+    // ตรวจสอบสิทธิ์ admin อีกครั้งก่อนลบ
+    if (!isAdmin) {
+      setMsg("ไม่มีสิทธิ์ในการลบไฟล์");
+      setDeleting(false);
+      return;
+    }
+
     setDeleting(true);
     setMsg(null);
+
+    console.log("Starting delete process for:", deleteTarget.id, deleteTarget.file_path);
+
     // ลบจาก storage
     const { error: delErr } = await supabase.storage
       .from("submissions")
       .remove([deleteTarget.file_path]);
+
     if (delErr) {
+      console.error("Storage delete error:", delErr);
       setMsg("ลบไฟล์ storage ไม่สำเร็จ: " + delErr.message);
       setDeleting(false);
       return;
     }
+
+    console.log("Storage delete successful, now deleting from database");
+
     // ลบจาก DB
     const { error: dbErr } = await supabase
       .from("certificates")
       .delete()
       .eq("id", deleteTarget.id);
+
     if (dbErr) {
+      console.error("Database delete error:", dbErr);
       setMsg("ลบ DB ไม่สำเร็จ: " + dbErr.message);
       setDeleting(false);
       return;
     }
+
+    console.log("Database delete successful, updating UI");
+
     setRows((rows: Cert[]) =>
       rows.filter((x: Cert) => x.id !== deleteTarget.id)
     );

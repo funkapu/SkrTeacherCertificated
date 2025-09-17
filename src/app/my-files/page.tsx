@@ -4,11 +4,14 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, Category } from "@/lib/categories";
+import { isAuthorizedUser } from "@/lib/admin";
 
 type Obj = { name: string; id: string; created_at: string };
 
 export default function MyFilesPage() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [cat, setCat] = useState<Category>(CATEGORIES[0]);
   const [items, setItems] = useState<Obj[]>([]);
   const [loading, setLoading] = useState(false);
@@ -18,7 +21,12 @@ export default function MyFilesPage() {
   useEffect(() => {
     supabase.auth
       .getUser()
-      .then(({ data }) => setUserId(data.user?.id ?? null));
+      .then(({ data }) => {
+        const user = data.user;
+        setUserId(user?.id ?? null);
+        setUserEmail(user?.email ?? null);
+      })
+      .finally(() => setAuthLoading(false));
   }, []);
 
   useEffect(() => {
@@ -38,15 +46,24 @@ export default function MyFilesPage() {
       });
   }, [cat.slug, userId]);
 
-  if (!userId)
+  if (authLoading) {
+    return <div className="p-6">กำลังตรวจสอบสิทธิ์…</div>;
+  }
+  if (!userId || !userEmail || !isAuthorizedUser(userEmail)) {
     return (
       <div className="p-6">
-        กรุณา{" "}
-        <Link className="underline" href="/">
-          เข้าสู่ระบบ
-        </Link>
+        <div className="text-center space-y-3">
+          <h1 className="text-lg font-bold">ไม่มีสิทธิ์เข้าถึง</h1>
+          <p className="text-gray-600">
+            ระบบนี้สำหรับผู้ใช้ที่ได้รับอนุญาตจากองค์กรเท่านั้น
+          </p>
+          <Link className="underline" href="/">
+            กลับไปหน้าเข้าสู่ระบบ
+          </Link>
+        </div>
       </div>
     );
+  }
 
   async function openSigned(name: string) {
     const raw = `${cat.slug}/${userId}/${name}`;

@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, Category } from "@/lib/categories";
+import { ADMIN_EMAILS, isAuthorizedUser } from "@/lib/admin";
 import Image from "next/image";
 import logo from "../image.png";
 type Cert = {
@@ -24,7 +25,9 @@ const ALL_TEACHERS_VALUE = "__ALL__";
 
 export default function SearchPage() {
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [cat, setCat] = useState<Category>(CATEGORIES[0]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacherId, setTeacherId] = useState<string>(ALL_TEACHERS_VALUE);
@@ -38,7 +41,13 @@ export default function SearchPage() {
   useEffect(() => {
     supabase.auth
       .getUser()
-      .then(({ data }) => setUserId(data.user?.id ?? null))
+      .then(({ data }) => {
+        const user = data.user;
+        const email = user?.email ?? null;
+        setUserId(user?.id ?? null);
+        setUserEmail(email);
+        setIsAdmin(email ? ADMIN_EMAILS.includes(email) : false);
+      })
       .finally(() => setAuthLoading(false));
   }, []);
 
@@ -77,16 +86,19 @@ export default function SearchPage() {
   if (authLoading) {
     return <div className="p-6">กำลังตรวจสอบสิทธิ์…</div>;
   }
-  if (!userId) {
+  if (!userId || !userEmail || !isAuthorizedUser(userEmail)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center space-y-3">
-          <h1 className="text-2xl font-bold">โปรดเข้าสู่ระบบ</h1>
+          <h1 className="text-2xl font-bold">ไม่มีสิทธิ์เข้าถึง</h1>
+          <p className="text-gray-600">
+            ระบบนี้สำหรับผู้ใช้ที่ได้รับอนุญาตจากองค์กรเท่านั้น
+          </p>
           <Link
             href="/"
             className="inline-block px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
           >
-            ไปหน้าเข้าสู่ระบบ
+            กลับไปหน้าเข้าสู่ระบบ
           </Link>
         </div>
       </div>
@@ -410,29 +422,31 @@ export default function SearchPage() {
                       {r.category_slug} • อัปโหลด {formatDate(r.created_at)}
                     </div>
 
-                    {/* ปุ่มลบขวาล่าง */}
-                    {/* <button
-                      onClick={() => setDeleteTarget(r)}
-                      className="absolute bottom-3 right-3 p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 shadow"
-                      title="ลบไฟล์นี้"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
+                    {/* ปุ่มลบขวาล่าง - เฉพาะแอดมิน */}
+                    {isAdmin && (
+                      <button
+                        onClick={() => setDeleteTarget(r)}
+                        className="absolute bottom-3 right-3 p-2 rounded-full bg-red-100 hover:bg-red-200 text-red-600 shadow"
+                        title="ลบไฟล์นี้"
                       >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button> */}
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                          strokeWidth={2}
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M6 18L18 6M6 6l12 12"
+                          />
+                        </svg>
+                      </button>
+                    )}
                     {/* Modal ยืนยันลบ */}
-                    {/* {deleteTarget && (
+                    {deleteTarget && (
                       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
                         <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-xs relative">
                           <div className="text-lg font-bold mb-2 text-red-600">
@@ -467,7 +481,7 @@ export default function SearchPage() {
                           </div>
                         </div>
                       </div>
-                    )} */}
+                    )}
                   </div>
                 );
               })}

@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { CATEGORIES, Category } from "@/lib/categories";
 import { sanitizeFilename } from "@/lib/teacherSlug";
+import { isAuthorizedUser } from "@/lib/admin";
 import Image from "next/image";
 import logo from "../image.png";
 import Link from "next/link";
@@ -41,6 +42,8 @@ function bytes(n?: number | null) {
 export default function UploadPage() {
   // 1. State declarations
   const [userId, setUserId] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [cat, setCat] = useState<Category>(CATEGORIES[0]);
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [teacher, setTeacher] = useState<Teacher | null>(null);
@@ -73,7 +76,12 @@ export default function UploadPage() {
   useEffect(() => {
     supabase.auth
       .getUser()
-      .then(({ data }) => setUserId(data.user?.id ?? null));
+      .then(({ data }) => {
+        const user = data.user;
+        setUserId(user?.id ?? null);
+        setUserEmail(user?.email ?? null);
+      })
+      .finally(() => setAuthLoading(false));
   }, []);
 
   async function fetchTeachersByCategory(categorySlug: string) {
@@ -98,16 +106,22 @@ export default function UploadPage() {
     })();
   }, [cat.slug]);
 
-  if (!userId) {
+  if (authLoading) {
+    return <div className="p-6">กำลังตรวจสอบสิทธิ์…</div>;
+  }
+  if (!userId || !userEmail || !isAuthorizedUser(userEmail)) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
         <div className="text-center space-y-3">
-          <h1 className="text-2xl font-bold">โปรดเข้าสู่ระบบ</h1>
+          <h1 className="text-2xl font-bold">ไม่มีสิทธิ์เข้าถึง</h1>
+          <p className="text-gray-600">
+            ระบบนี้สำหรับผู้ใช้ที่ได้รับอนุญาตจากองค์กรเท่านั้น
+          </p>
           <Link
             href="/"
             className="inline-block px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
           >
-            ไปหน้าเข้าสู่ระบบ
+            กลับไปหน้าเข้าสู่ระบบ
           </Link>
         </div>
       </div>

@@ -6,7 +6,10 @@ import logo from "./image.png";
 
 export default function Page() {
   async function signInWithGoogle() {
-    const redirectTo = `${location.origin}/auth/callback`;
+    // ใช้ URL แบบ dynamic เพื่อรองรับทั้ง local และ production
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://skr-teacher-certificated.vercel.app';
+    const redirectTo = `${baseUrl}/auth/callback`;
+
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -15,7 +18,6 @@ export default function Page() {
         queryParams: {
           access_type: "offline",
           prompt: "select_account",
-          // Additional parameters to help with embedded browsers
           include_granted_scopes: "true",
           response_type: "code",
         },

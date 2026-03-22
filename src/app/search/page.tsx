@@ -392,11 +392,11 @@ export default function SearchPage() {
         <section className="bg-white rounded-2xl shadow-sm border p-4 md:p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="block">
-              <div className="text-sm font-medium text-slate-700 mb-1">
+              <div className="text-sm font-medium text-black mb-1">
                 กลุ่มสาระ
               </div>
               <select
-                className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                 value={cat.slug}
                 onChange={(e) =>
                   setCat(CATEGORIES.find((c) => c.slug === e.target.value)!)
@@ -422,7 +422,7 @@ export default function SearchPage() {
                 )}
               </div>
               <select
-                className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                 value={teacherId}
                 onChange={(e) => setTeacherId(e.target.value)}
               >

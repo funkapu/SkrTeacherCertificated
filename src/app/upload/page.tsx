@@ -216,7 +216,7 @@ export default function UploadPage() {
             <div className="h-8 w-8 rounded-lg  text-white grid place-items-center font-bold">
               <Image src={logo} alt="Logo" width={32} height={32} />
             </div>
-            <div className="font-semibold">Upload Certificates</div>
+            <div className="font-semibold text-black">Upload Certificates</div>
           </div>
           <div className="flex gap-2">
             <button
@@ -241,7 +241,7 @@ export default function UploadPage() {
       <main className="mx-auto max-w-5xl px-4 py-6">
         {/* Title */}
         <div className="mb-4">
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight text-black">
             อัปโหลดใบประกาศ (เลือกครูตามหมวด)
           </h1>
         </div>
@@ -254,11 +254,11 @@ export default function UploadPage() {
           {/* Selects */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="block">
-              <div className="text-sm font-medium text-slate-700 mb-1">
+              <div className="text-sm font-medium text-black mb-1">
                 หมวด
               </div>
               <select
-                className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                 value={cat.slug}
                 onChange={(e) =>
                   setCat(CATEGORIES.find((c) => c.slug === e.target.value)!)
@@ -273,9 +273,9 @@ export default function UploadPage() {
             </label>
 
             <label className="block md:col-span-2">
-              <div className="text-sm font-medium text-slate-700 mb-1">ครู</div>
+              <div className="text-sm font-medium text-black mb-1">ครู</div>
               <select
-                className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                 value={teacher?.id ?? ""}
                 onChange={(e) =>
                   setTeacher(
@@ -394,7 +394,7 @@ export default function UploadPage() {
                   {/* Meta fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <label className="block">
-                      <div className="text-sm text-slate-700 mb-1">
+                      <div className="text-sm text-black mb-1">
                         วันที่อบรม
                       </div>
                       <input
@@ -418,7 +418,7 @@ export default function UploadPage() {
                       />
                     </label>
                     <label className="block sm:col-span-3">
-                      <div className="text-sm text-slate-700 mb-1">
+                      <div className="text-sm text-black mb-1">
                         หน่วยงานที่อบรม
                       </div>
                       <input

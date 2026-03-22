@@ -399,7 +399,7 @@ export default function UploadPage() {
                       </div>
                       <input
                         type="date"
-                        className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                         value={c.training_date}
                         onChange={(e) =>
                           setCert(i, { training_date: e.target.value })
@@ -411,7 +411,7 @@ export default function UploadPage() {
                         หัวข้อที่อบรม
                       </div>
                       <input
-                        className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                         value={c.topic}
                         onChange={(e) => setCert(i, { topic: e.target.value })}
                         placeholder="เช่น การพัฒนาสื่อการสอนดิจิทัล"
@@ -422,7 +422,7 @@ export default function UploadPage() {
                         หน่วยงานที่อบรม
                       </div>
                       <input
-                        className="w-full rounded-lg border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                        className="w-full rounded-lg border-slate-300 text-black focus:border-blue-500 focus:ring-blue-500"
                         value={c.organization}
                         onChange={(e) =>
                           setCert(i, { organization: e.target.value })

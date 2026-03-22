@@ -412,11 +412,11 @@ export default function SearchPage() {
 
             <label className="block md:col-span-2">
               <div className="flex items-center justify-between">
-                <div className="text-sm font-medium text-slate-700 mb-1">
+                <div className="text-sm font-medium text-black mb-1">
                   ครูในหมวดนี้
                 </div>
                 {teachers.length > 0 && (
-                  <span className="text-xs text-slate-500 mb-1">
+                  <span className="text-xs text-black mb-1">
                     ทั้งหมด {teachers.length} คน
                   </span>
                 )}
@@ -447,7 +447,7 @@ export default function SearchPage() {
               ค้นหา
             </button>
             {!!resultLabel(rows.length) && (
-              <span className="text-sm px-2 py-1 rounded-full bg-slate-100 text-slate-700">
+              <span className="text-sm px-2 py-1 rounded-full bg-slate-100 text-black">
                 {resultLabel(rows.length)}
               </span>
             )}
@@ -472,7 +472,7 @@ export default function SearchPage() {
                 return (
                   <div
                     key={r.id}
-                    className="border rounded-xl p-4 bg-white shadow-sm hover:shadow transition flex flex-col gap-3 relative"
+                    className="border rounded-xl p-4 bg-white shadow-sm hover:shadow transition flex flex-col gap-3 relative text-black"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="font-semibold leading-tight line-clamp-2">
